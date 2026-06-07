@@ -1,0 +1,52 @@
+XalanSwift
+==========
+
+Copyright 2026 XalanSwift contributors
+
+Licensed under the Apache License, Version 2.0 (see `LICENSE`).
+
+-------------------------------------------------------------------------------
+
+This package distributes a prebuilt binary, `XalanCore.xcframework`, which
+statically links compiled code from the following Apache Software Foundation
+projects. Both are licensed under the Apache License, Version 2.0. Per section
+4(d) of that license, the corresponding NOTICE text is reproduced below, and the
+full license texts are included under `ThirdPartyLicenses/`.
+
+-------------------------------------------------------------------------------
+Apache Xalan-C++ 1.12.0  (XSLT/XPath engine)
+  License: Apache-2.0   (ThirdPartyLicenses/Apache-Xalan-C/LICENSE)
+  Notice:               (ThirdPartyLicenses/Apache-Xalan-C/NOTICE)
+-------------------------------------------------------------------------------
+
+  Apache XALAN-C
+  Copyright (c) 1999-2012 The Apache Software Foundation
+
+  This product includes software developed at
+  The Apache Software Foundation (http://www.apache.org/).
+
+  This software is based on the ASF XERCES-C project.
+
+  Portions of this software were originally based on the following:
+    - software copyright (c) 1999, IBM Corporation. (http://www.ibm.com).
+
+-------------------------------------------------------------------------------
+Apache Xerces-C++ 3.2.5  (XML parser)
+  License: Apache-2.0   (ThirdPartyLicenses/Apache-Xerces-C/LICENSE)
+  Notice:               (ThirdPartyLicenses/Apache-Xerces-C/NOTICE)
+-------------------------------------------------------------------------------
+
+  This product includes software developed by
+  The Apache Software Foundation (http://www.apache.org/).
+
+  Portions of this software were originally based on the following:
+    - software copyright (c) 1999, IBM Corporation., http://www.ibm.com.
+
+-------------------------------------------------------------------------------
+
+The Xalan-C and Xerces-C sources were compiled unmodified from their official
+release sources; only build configuration (static libraries, macOS deployment
+target) was changed. No source modifications were made to either project.
+
+The Swift sources and the C/C++ shim (`native/`, `Sources/`) in this package are
+original work and are not part of the Apache projects above.

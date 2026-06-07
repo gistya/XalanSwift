@@ -1,0 +1,4 @@
+module CXalan {
+    header "cxalan.h"
+    export *
+}

@@ -1,0 +1,9 @@
+/.build
+/.xcframework-build
+.swiftpm/
+*.xcodeproj
+DerivedData/
+.DS_Store
+
+# NOTE: XalanCore.xcframework IS committed on purpose — it makes the package
+# self-contained. Do not add it here.
