@@ -8,26 +8,26 @@ import PackageDescription
 // `scripts/build-xcframework.sh` after changing the shim or dependencies.
 let package = Package(
     name: "Xalan",
-    platforms: [.macOS(.v11)],
+    platforms: [.macOS(.v11), .iOS(.v13)],
     products: [
         .library(name: "Xalan", targets: ["Xalan"]),
     ],
     targets: [
         // Prebuilt: the merged static library + cxalan.h module.
+        // XalanCore.xcframework ships macOS, iOS device, and iOS simulator
+        // slices (all arm64); iPadOS uses the iOS slices.
         .binaryTarget(
             name: "CXalan",
             path: "XalanCore.xcframework"
         ),
-        // Idiomatic Swift API.  The static archive needs the C++ runtime and
-        // the macOS frameworks used by Xerces' Unicode transcoder; declaring
-        // them here keeps the package usable as a normal dependency.
+        // Idiomatic Swift API.  The static archive only needs the C++ runtime;
+        // the libc "iconv" transcoder used in the build avoids any platform
+        // framework dependency (works identically on macOS and iOS).
         .target(
             name: "Xalan",
             dependencies: ["CXalan"],
             linkerSettings: [
                 .linkedLibrary("c++"),
-                .linkedFramework("CoreServices"),
-                .linkedFramework("CoreFoundation"),
             ]
         ),
         // Small demo CLI: `swift run xalan-demo`.

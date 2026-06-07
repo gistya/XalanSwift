@@ -5,6 +5,9 @@ the XSLT 1.0 / XPath 1.0 processor. It gives you idiomatic, memory-safe Swift
 types for transforming XML with stylesheets and for running XPath queries,
 backed by the battle-tested Xalan/Xerces C++ engines.
 
+Runs on **macOS, iOS and iPadOS** (Apple Silicon). The full test suite passes
+both natively on macOS and on the iOS Simulator.
+
 ```swift
 import Xalan
 
@@ -36,19 +39,21 @@ Three layers:
    pure-C header (`native/include/cxalan.h`). All C++ exceptions are trapped at
    the boundary; UTF‑8 ⇄ UTF‑16 conversion is handled here.
 3. The shim object is **merged together with** the three static archives into a
-   single `libXalanCore.a`, wrapped as **`XalanCore.xcframework`** and committed
-   into the repo as a SwiftPM `binaryTarget`. `Xalan` is the Swift module you
-   `import`.
+   single `libXalanCore.a` per platform, wrapped as **`XalanCore.xcframework`**
+   (slices: `macos-arm64`, `ios-arm64`, `ios-arm64-simulator`) and committed into
+   the repo as a SwiftPM `binaryTarget`. `Xalan` is the Swift module you `import`.
 
 Because the merged archive is vendored, the package needs **nothing on disk
 beyond this directory** — no external paths, no separate dependency build. The
-only runtime dependencies are the system `CoreServices` / `CoreFoundation`
-frameworks (used by Xerces' macOS transcoder) and the C++ runtime, all declared
-in `Package.swift`.
+only runtime dependency is the C++ runtime, declared in `Package.swift`. Xerces
+is built with the libc **`iconv`** transcoder (not the macOS CoreServices one),
+so the exact same code works on iOS, where CoreServices does not exist.
 
-> Architecture: the bundled framework is **macOS arm64** (Apple Silicon). To
-> also support `x86_64`, build the Xerces/Xalan static libs for that arch and
-> pass both `-library` slices to `xcodebuild -create-xcframework`.
+> Architecture: the framework is **arm64** across all slices (Apple Silicon Macs,
+> iOS/iPadOS devices, and the simulator on Apple Silicon). It does **not** include
+> an `x86_64` simulator slice, so it won't link for an Intel-Mac iOS simulator. To
+> add that, build the deps + shim for `iphonesimulator`/`x86_64` and pass an extra
+> `-library` to `xcodebuild -create-xcframework` (see `scripts/build-xcframework.sh`).
 
 ## Building / using
 
@@ -63,39 +68,37 @@ swift run xalan-demo
 Add it as a dependency like any other local SwiftPM package
 (`.package(path: "…/XalanSwift")`).
 
+To build/run for iOS, use `xcodebuild` with an iOS destination, e.g.:
+
+```sh
+# Run the test suite on a simulator
+xcodebuild test -scheme Xalan-Package -destination 'platform=iOS Simulator,name=iPhone 15'
+```
+
 ### Regenerating the bundled framework
 
-Only needed if you change `native/shim.cpp` or rebuild the dependencies:
+Only needed if you change `native/shim.cpp` or want to rebuild the engines:
 
 ```sh
-./scripts/build-xcframework.sh      # recompiles the shim, re-merges, rebuilds XalanCore.xcframework
+./scripts/build-xcframework.sh
 ```
 
-It reads the dependency builds from `$XALAN_ROOT` / `$XERCES_ROOT`
-(defaulting to `../xalan-c/_install` and `../xerces-c/_install`).
+The script is self-contained: for **each** platform (macOS, iOS device, iOS
+simulator) it builds Xerces-C 3.2.5 and Xalan-C 1.12.0 as static libs straight
+from their source trees, compiles the shim, merges everything, and assembles
+`XalanCore.xcframework`. It reads the dependency **sources** from `$XERCES_SRC`
+/ `$XALAN_SRC` (defaulting to `../xerces-c` and `../xalan-c`) — no separate
+dependency build or install step is required.
 
-### Rebuilding the C++ dependencies from scratch
+Two small, documented patches are applied to the cloned dependency sources to
+support iOS cross-compilation (importing a host-built `MsgCreator`, and gating
+the command-line/sample/test executables that can't configure as iOS app
+bundles).
 
-If you need to regenerate the static libs the framework is built from:
-
-```sh
-# Xerces-C 3.2.5 (static)
-cd ../xerces-c
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF \
-      -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0 \
-      -Dnetwork=OFF -DCMAKE_INSTALL_PREFIX="$PWD/_install"
-cmake --build build --target install -j$(sysctl -n hw.ncpu)
-
-# Xalan-C 1.12.0 (static), pointed at the Xerces install
-cd ../xalan-c
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF \
-      -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0 \
-      -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
-      -DCMAKE_PREFIX_PATH="$PWD/../xerces-c/_install" \
-      -DCMAKE_EXE_LINKER_FLAGS="-framework CoreServices -framework CoreFoundation" \
-      -DCMAKE_INSTALL_PREFIX="$PWD/_install"
-cmake --build build --target install -j$(sysctl -n hw.ncpu)
-```
+📖 **Rebuilding from scratch?** [`BUILDING.md`](BUILDING.md) is a full step-by-step
+guide to compiling Xerces-C + Xalan-C from source for macOS/iOS/iPadOS, with every
+gotcha (transcoder choice, `MsgCreator`, iOS app-bundle configure errors, the
+Xerces package-config trap) explained and worked around.
 
 ## API overview
 
@@ -176,8 +179,9 @@ global library state *is* thread-safe.
   includes that reference remote `http(s)://` URLs won't fetch over the network.
   Local files and in-memory strings work fully. Rebuild Xerces without
   `-Dnetwork=OFF` (it will use libcurl) if you need remote retrieval.
-- The committed `XalanCore.xcframework` is **arm64-only** (Apple Silicon). See
-  the architecture note above to produce a universal (arm64 + x86_64) build.
+- Runs on **macOS / iOS / iPadOS**, **arm64** only. There is no `x86_64`
+  simulator slice (so no Intel-Mac iOS simulator) and no Intel-Mac native slice;
+  see the architecture note above to add them.
 
 ## Licensing
 
